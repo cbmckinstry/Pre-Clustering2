@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const pullCombinations = document.getElementById("pull_combinations");
+            const useCombinations = document.getElementById("use_combinations");
+
+            function handleCheckboxChange(event) {
+                if (event.target.checked) {
+
+                     if (event.target === pullCombinations) {
+                        useCombinations.checked = false;
+                    } else if (event.target === useCombinations) {
+                        pullCombinations.checked = false;
+                    }
+                }
+            }
+
+            pullCombinations.addEventListener("change", handleCheckboxChange);
+            useCombinations.addEventListener("change", handleCheckboxChange);
+        });
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pre-Clustering Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            display: flex;
+            gap: 20px;
+        }
+        .left-column, .right-column {
+            flex: 1;
+        }
+        .instructions {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        form {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        textarea, input {
+            width: 95%;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        button {
+            background-color: #007BFF;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .error-message {
+            color: red;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .results-section {
+            margin-top: 15px;
+            overflow-x: auto; /* Allows horizontal scrolling if needed */
+            max-width: 100%; /* Prevents overflow */
+        }
+
+        .results-section table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed; /* Makes columns evenly distributed */
+            min-width: 100%; /* Ensures no unnecessary scrolling */
+        }
+
+        .results-section th,
+        .results-section td {
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #ccc;
+            word-wrap: break-word; /* Ensures text does not overflow */
+            word-break: break-word; /* Ensures long words wrap */
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            .left-column, .right-column {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .checkbox-submit-container {
+                flex-direction: column;
+                align-items: flex-start; /* Stacks elements neatly on small screens */
+                gap: 10px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .results-section th {
+                font-size: 12px; /* Smaller font for table headers on small screens */
+                padding: 6px; /* Reduce padding for better spacing */
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- Left Column -->
+    <div class="left-column">
+        <!-- Instructions Section -->
+        <div class="instructions">
+            <h2>Instructions</h2>
+            <p>Welcome to the Pre-Clustering Tool. Use the following forms to calculate vehicle capacities, crew structures, and ranges for your clustering needs.</p>
+            <ul>
+                <li><strong>Vehicle Capacities:</strong> Enter non-assign together vehicle capacities and the number of 5-, 6-, and 7-person groups to get allocations and combinations.</li>
+
+                <li><strong>Crew Ranges:</strong> Enter the total number of people to determine possible ranges for crew sizes.</li>
+
+                <li><strong>Crew Structure:</strong> Provide the total number of people and crews to calculate the distribution of 5-, 6-, and 7-person groups.</li>
+            </ul>
+            <p>Submit each form independently and view results below each section.</p>
+        </div>
+
+        <!-- Ranges Form -->
+        <form method="POST" action="/ranges">
+            <h2>Crew Ranges</h2>
+            {% if error_message and request.path == '/ranges' %}
+                <div class="error-message">{{ error_message }}</div>
+            {% endif %}
+            <label for="total_people">Enter Total People:</label>
+            <input type="number" id="total_people" name="total_people" value="{{ total_people }}" required>
+
+            <button type="submit">Submit</button>
+
+            {% if ranges_result %}
+                <div class="results-section">
+                    <h3>Ranges Result:</h3>
+                        {% if ranges_result[0] or ranges_result[1]%}
+                            {% if ranges_result[0] %}
+                                <p>Optimal: {{ ranges_result[0][0] }}</p>
+                                <p>5 and 6-person range: {{ ranges_result[0][0] }} to {{ ranges_result[0][1] }}</p>
+                            {% endif %}
+                            {% if ranges_result[1] %}
+                                {% if not ranges_result[0] %}
+                                    <p>Optimal: {{ ranges_result[1][1] }}</p>
+                                {% endif %}
+                                <p>6 and 7-person range: {{ ranges_result[1][0] }} to {{ ranges_result[1][1] }}</p>
+                            {% endif %}
+                        {% else %}
+                            <p> No valid range results</p>
+                        {% endif %}
+                </div>
+            {% else %}
+                <p>No results for ranges yet.</p>
+            {% endif %}
+        </form>
+
+        <!-- Matrices Form -->
+        <form method="POST" action="/matrices">
+            <h2>Crew Structure</h2>
+            {% if error_message and request.path == '/matrices' %}
+                <div class="error-message">{{ error_message }}</div>
+            {% endif %}
+            <label for="people">Enter Total People:</label>
+            <input type="number" id="people" name="people" value="{{ people }}" required>
+
+            <label for="crews">Enter Total Crews:</label>
+            <input type="number" id="crews" name="crews" value="{{ crews }}" required>
+
+            <button type="submit">Submit</button>
+
+            {% if matrices_result %}
+                <div class="results-section">
+                    <h3>Crew Structure Result:</h3>
+                    {% if matrices_result[0]!=0 %}
+                        <p>5-person crews: {{ matrices_result[0] }}</p>
+                    {% endif %}
+                    {% if matrices_result[1]!=0 %}
+                        <p>6-person crews: {{ matrices_result[1] }}</p>
+                    {% endif %}
+                    {% if matrices_result[2]!=0 %}
+                        <p>7-person crews: {{ matrices_result[2] }}</p>
+                    {% endif %}
+                </div>
+            {% else %}
+                <p>No results for crew structure yet.</p>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Right Column -->
+    <div class="right-column">
+        <!-- Vehicle Capacities Form -->
+        <!-- Vehicle Capacities Form -->
+        <form method="POST" action="/">
+            <h2>Vehicle Capacities</h2>
+            {% if error_message and request.path == '/' %}
+                <div class="error-message">{{ error_message }}</div>
+            {% endif %}
+
+            <label for="vehlist">Enter Vehicle Capacities (comma-separated):</label>
+            <textarea id="vehlist" name="vehlist" rows="4" required>{{ vehlist }}</textarea>
+
+            <label for="pers5">Enter Number of 5-person Groups:</label>
+            <input type="number" id="pers5" name="pers5" value="{{ pers5 }}" required>
+
+            <label for="pers6">Enter Number of 6-person Groups:</label>
+            <input type="number" id="pers6" name="pers6" value="{{ pers6 }}" required>
+
+            <label for="pers7">Enter Number of 7-person Groups:</label>
+            <input type="number" id="pers7" name="pers7" required value="{{ pers7 }}">
+
+            <div class="checkbox-submit-container">
+                <button type="submit" class="submit-button">Submit</button>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" id="pull_combinations" name="pull_combinations" value="1"
+                            {% if pull_combinations == 1 %} checked {% endif %}>
+                    Only Combos
+                </label>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" id="use_combinations" name="use_combinations" value="1"
+                            {% if use_combinations == 1 %} checked {% endif %}>
+                    Use Combos
+                </label>
+            </div>
+
+            <style>
+
+                .submit-button {
+                    flex-shrink: 0;
+                }
+
+                .checkbox-submit-container {
+                    display: flex;
+                    align-items: center; /* aligns vertically */
+                    gap: 40px;
+                    margin-top: 15px;
+                    flex-wrap: wrap;
+                }
+
+                .checkbox-label {
+                    display: flex;
+                    align-items: center;
+                    font-size: 17px;
+                    cursor: pointer;
+                    white-space: nowrap;
+                    height: 38px;
+                    padding-top: 2px;
+                }
+
+                .checkbox-label input[type="checkbox"] {
+                    width: 22px;
+                    height: 22px;
+                    margin: 0 7px 0 0;
+                    transform: translateY(-1px); /* keeps checkbox vertically aligned */
+                    cursor: pointer;
+                }
+
+                /* Mobile-friendly adjustments */
+                @media (max-width: 600px) {
+                    .checkbox-submit-container {
+                        flex-direction: row;
+                        align-items: center;
+                        gap: 10px;
+                    }
+
+                }
+
+                button {
+                    background-color: #007BFF;
+                    color: white;
+                    padding: 10px 20px;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 16px;
+                    text-align: center;
+                }
+
+                button:hover {
+                    background-color: #0056b3;
+                }
+
+            </style>
+            {% if results %}
+                <div class="results-section">
+                    <h3>Vehicle Capacities Results</h3>
+                    {% if results[1][0] == 0 and results[1][1] == 0 %}
+                        <p>You're all good!</p>
+                    {% else %}
+                        <p><strong>Totals:</strong>
+                            {% if pers7 == 0 %}
+                                Total 5-person groups: {{ results[0][0][0] }},
+                            {% else %}
+                                Total 7-person groups: {{ results[0][0][0] }},
+                            {% endif %}
+                            Total 6-person groups: {{ results[0][0][1] }}
+                        </p>
+                        <p><strong>Shortfall:</strong>
+                            {% if pers7 == 0 %}
+                                5-person groups: {{ results[1][0] }},
+                            {% else %}
+                                7-person groups: {{ results[1][0] }},
+                            {% endif %}
+                            6-person groups: {{ results[1][1] }}
+                        </p>
+                        <p><strong>Combinations:</strong></p>
+                            {% if len(alllist[0])!=0 %}
+                                {% if backupsize==5 %}
+                                    {% for vehicle in alllist[0] %}
+                                        <p>Combine a {{ vehicle[0][0] }}-person and {{ vehicle[0][1] }}-person vehicle, ({{ vehicle[1][0] }} 5-person, {{ vehicle[1][1] }} 6-person; Impacts {{ vehicle[2] }} crews)</p>
+                                    {% endfor %}
+                                {% else %}
+                                    {% for vehicle in alllist[0] %}
+                                        <p>Combine a {{ vehicle[0][0] }}-person and {{ vehicle[0][1] }}-person vehicle, ({{ vehicle[1][1] }} 6-person, {{ vehicle[1][0] }} 7-person; Impacts {{ vehicle[2] }} crews)</p>
+                                    {% endfor %}
+                                {% endif %}
+                            {% endif %}
+                            {% if len(alllist[1])!=0%}
+                                {% if backupsize==5 %}
+                                    {% for vehicle in alllist[1] %}
+                                        <p>Combine a {{ vehicle[0][0] }}-person, {{ vehicle[0][1] }}-person, and {{ vehicle[0][2] }}-person vehicle, ({{ vehicle[1][0] }} 5-person, {{ vehicle[1][1] }} 6-person; Impacts {{ vehicle[2] }} crews)</p>
+                                    {% endfor %}
+                                {% else %}
+                                    {% for vehicle in alllist[1] %}
+                                        <p>Combine a {{ vehicle[0][0] }}-person, {{ vehicle[0][1] }}-person, and {{ vehicle[0][2] }}-person vehicle, ({{ vehicle[1][1] }} 6-person, {{ vehicle[1][0] }} 7-person; Impacts {{ vehicle[2] }} crews)</p>
+                                    {% endfor %}
+                                {% endif %}
+                            {% endif %}
+                        {% if len(alllist[2])!=0%}
+                            {% if backupsize==5 %}
+                                {% for vehicle in alllist[2] %}
+                                    <p>Combine a {{ vehicle[0][0] }}-person, {{ vehicle[0][1] }}-person, {{ vehicle[0][2] }}-person, and {{ vehicle[0][3] }}-person vehicle, ({{ vehicle[1][0] }} 5-person, {{ vehicle[1][1] }} 6-person; Impacts {{ vehicle[2] }} crews)</p>
+                                {% endfor %}
+                            {% else %}
+                                {% for vehicle in alllist[2] %}
+                                    <p>Combine a {{ vehicle[0][0] }}-person, {{ vehicle[0][1] }}-person, {{ vehicle[0][2] }}-person, and {{ vehicle[0][3] }}-person vehicle, ({{ vehicle[1][1] }} 6-person, {{ vehicle[1][0] }} 7-person; Impacts {{ vehicle[2] }} crews)</p>
+                                {% endfor %}
+                            {% endif %}
+                        {% endif %}
+                        {% if len(alllist[3])!=0%}
+                            {% if backupsize==5 %}
+                                {% for vehicle in alllist[3] %}
+                                    <p>Combine a {{ vehicle[0][0] }}-person, {{ vehicle[0][1] }}-person, {{ vehicle[0][2] }}-person, {{ vehicle[0][3] }}-person, and {{ vehicle[0][4] }}-person vehicle, ({{ vehicle[1][0] }} 5-person, {{ vehicle[1][1] }} 6-person; Impacts {{ vehicle[2] }} crews)</p>
+                                {% endfor %}
+                            {% else %}
+                                {% for vehicle in alllist[3] %}
+                                    <p>Combine a {{ vehicle[0][0] }}-person, {{ vehicle[0][1] }}-person, {{ vehicle[0][2] }}-person, {{ vehicle[0][3] }}-person, and {{ vehicle[0][4] }}-person vehicle, ({{ vehicle[1][1] }} 6-person, {{ vehicle[1][0] }} 7-person; Impacts {{ vehicle[2] }} crews)</p>
+                                {% endfor %}
+                            {% endif %}
+                        {% endif %}
+                        {% if len(alllist[4])!=0%}
+                            {% if backupsize==5 %}
+                                {% for vehicle in alllist[4] %}
+                                    <p>Combine a {{ vehicle[0][0] }}-person, {{ vehicle[0][1] }}-person, {{ vehicle[0][2] }}-person, {{ vehicle[0][3] }}-person, {{ vehicle[0][4] }}-person, and {{ vehicle[0][5] }}-person vehicle, ({{ vehicle[1][0] }} 5-person, {{ vehicle[1][1] }} 6-person; Impacts {{ vehicle[2] }} crews)</p>
+                                {% endfor %}
+                            {% else %}
+                                {% for vehicle in alllist[4] %}
+                                    <p>Combine a {{ vehicle[0][0] }}-person, {{ vehicle[0][1] }}-person, {{ vehicle[0][2] }}-person, {{ vehicle[0][3] }}-person, {{ vehicle[0][4] }}-person, and {{ vehicle[0][5] }}-person vehicle, ({{ vehicle[1][1] }} 6-person, {{ vehicle[1][0] }} 7-person; Impacts {{ vehicle[2] }} crews)</p>
+                                {% endfor %}
+                            {% endif %}
+                        {% endif %}
+                        {% if len(alllist[5])!=0%}
+                            {% if backupsize==5 %}
+                                {% for vehicle in alllist[5] %}
+                                    <p>Combine a {{ vehicle[0][0] }}-person, {{ vehicle[0][1] }}-person, {{ vehicle[0][2] }}-person, {{ vehicle[0][3] }}-person, {{ vehicle[0][4] }}-person, {{ vehicle[0][5] }}-person, and {{ vehicle[0][6] }}-person vehicle, ({{ vehicle[1][0] }} 5-person, {{ vehicle[1][1] }} 6-person; Impacts {{ vehicle[2] }} crews)</p>
+                                {% endfor %}
+                            {% else %}
+                                {% for vehicle in alllist[5] %}
+                                    <p>Combine a {{ vehicle[0][0] }}-person, {{ vehicle[0][1] }}-person, {{ vehicle[0][2] }}-person, {{ vehicle[0][3] }}-person, {{ vehicle[0][4] }}-person, {{ vehicle[0][5] }}-person, and {{ vehicle[0][6] }}-person vehicle, ({{ vehicle[1][1] }} 6-person, {{ vehicle[1][0] }} 7-person; Impacts {{ vehicle[2] }} crews)</p>
+                                {% endfor %}
+                            {% endif %}
+                        {% endif %}
+                            {% if len(alllist[0])==0 and len(alllist[1])==0 and len(alllist[2])==0 and len(alllist[3])==0 and len(alllist[4])==0 and len(alllist[5])==0%}
+                                <p>No Combinations Available</p>
+                            {% endif %}
+                        {% if rem_vehs and (len(alllist[0])!=0 or len(alllist[1])!=0 or len(alllist[2])!=0 or len(alllist[3])!=0 or len(alllist[4])!=0 or len(alllist[5])!=0)%}
+                            <p><strong>Remaining Vehicles:</strong>
+                                {% for veh in rem_vehs %}
+                                    {{ veh[0] }}  {{ veh[1] }}-person{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </p>
+                        {% elif not rem_vehs and allocations_only==0%}
+                            <p><strong>Remaining Vehicles:</strong> None</p>
+                        {% endif %}
+                    {% endif %}
+
+                    <!-- Allocations Matrix -->
+                    {% if sorted_allocations %}
+                        <h3>Sorted Allocations:</h3>
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Vehicle Number</th>
+                                <th>Vehicle Capacity</th>
+                                {% if pers7 == 0 %}
+                                    <th>5-Person Groups</th>
+                                {% endif %}
+                                <th>6-Person Groups</th>
+                                {% if pers7 != 0 %}
+                                    <th>7-Person Groups</th>
+                                {% endif %}
+                                <th>Space Left</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for entry in sorted_allocations %}
+                                <tr>
+                                    <td>{{ entry[3] }}</td>
+                                    <td>{{ entry[0] }}</td>
+                                    {% if pers7 == 0 %}
+                                        <td>{{ entry[1][0] }}</td> <!-- 5-person groups -->
+                                    {% endif %}
+                                    <td>{{ entry[1][1] }}</td> <!-- 6-person groups -->
+                                    {% if pers7 != 0 %}
+                                        <td>{{ entry[1][0] }}</td> <!-- 7-person groups -->
+                                    {% endif %}
+                                    <td>{{ entry[2] }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>No sorted allocations to display.</p>
+                    {% endif %}
+                </div>
+            {% else %}
+                <p>No results for vehicles yet.</p>
+            {% endif %}
+        </form>
+    </div>
+</div>
+</body>
+</html>
