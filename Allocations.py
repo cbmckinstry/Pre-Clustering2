@@ -274,7 +274,6 @@ def closestalg(required_groups, allocations, backupsize=5):
             best_index_avg.append(allocations[l])
         return [allocations[best_indices[lowest_average(best_index_avg)]],[0,0]]
 
-
     # Optimize allocations before resolving ties
     optimized_allocations = optimize_allocations(allocations, backupsize)
 
@@ -291,6 +290,8 @@ def closestalg(required_groups, allocations, backupsize=5):
 
 
 def optimize_allocations(allocations,backupsize):
+    if backupsize==7:
+        backupsize=6
     for m in range(len(allocations)):
         for i in range(len(allocations[m][1])-1,0,-1):
             for j in range(0,i):
